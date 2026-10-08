@@ -1,0 +1,33 @@
+export type Lang='kk'|'ru'|'en';
+export type Copy={name:string;description:string;features:string;requirements:string};
+export type Product={id:string;owner_id:string;category:string;price:number;content:Record<Lang,Copy>;status:string;filename:string;updated_at:number;file_key?:string;demo_url?:string};
+export const make=(id:string,category:string,price:number,kk:string[],ru:string[],en:string[])=>({id,category,price,file_key:'builtin:'+id,filename:id+'.zip',content:Object.fromEntries([['kk',kk],['ru',ru],['en',en]].map(([l,v])=>[l,{name:v[0],description:v[1],features:v[2],requirements:v[3]}]))});
+const baseCatalog=[
+make('sto-booking','telegram',10000,
+['СТО-ға жазылу боты','Қызметті, күнді және бос уақытты таңдау арқылы клиенттерді жазыңыз.','Бос слоттар және қайталанбайтын жазылу\nКлиенттің өз жазылуын тоқтатуы\nӘкімшіге хабарлама\nОрнату шебері','Python 3.10+, Telegram токені және үнемі жұмыс істейтін компьютер/сервер. Бір слотқа бір көлік; UTC+5. Хостинг пен төлем қабылдау кірмейді.'],
+['Бот записи для СТО','Клиент выбирает услугу, день и свободное время. Записи сохраняются в SQLite.','Защита от двойной записи\nОтмена записи клиентом\nУведомления администратору\nМастер установки','Python 3.10+, токен Telegram и постоянно работающий компьютер/сервер. Одна машина на слот; UTC+5. Хостинг и платежи не включены.'],
+['Auto service booking bot','Customers choose a service, date and available time. Bookings are saved in SQLite.','Double-booking protection\nCustomer cancellations\nAdministrator notifications\nSetup wizard','Python 3.10+, Telegram token and an always-running computer/server. One vehicle per slot; UTC+5. Hosting and payments are not included.']),
+make('telegram-orders','telegram',7500,
+['Тапсырыс қабылдайтын бот','Telegram арқылы тапсырыс қабылдап, әкімшіге хабарлама жіберетін Python бот.','Тапсырыс пен телефонды қабылдау\nӘкімшіге хабарлама\nҚазақша, орысша, ағылшынша жауаптар','Python 3.10+, Telegram бот токені, тұрақты жұмыс істейтін компьютер немесе сервер. Төлем мен дерекқор кірмейді.'],
+['Бот для приёма заказов','Python-бот принимает заказы в Telegram и отправляет их администратору.','Заказ и контакт в одном сообщении\nУведомления администратору\nОтветы на трёх языках','Python 3.10+, токен Telegram-бота, постоянно работающий компьютер или сервер. Без платежей и базы данных.'],
+['Telegram order bot','A Python bot that accepts orders in Telegram and notifies your administrator.','Orders and contact details\nAdministrator notifications\nReplies in three languages','Python 3.10+, Telegram bot token and an always-running computer or server. No payment processing or database.']),
+make('sheets-crm','sheets',5000,
+['Google Sheets CRM','Клиенттер мен тапсырыстарды бір кестеде басқарыңыз.','Клиенттер базасы\nТапсырыс статустары\nТөленген сатылым есебі','Google аккаунт және Apps Script-ке рұқсат. Бірінші 1000 жолға арналған.'],
+['Google Sheets CRM','Управляйте клиентами и заказами в одной таблице.','База клиентов\nСтатусы заказов\nРасчёт оплаченных продаж','Google-аккаунт и разрешение Apps Script. Формулы рассчитаны на первые 1000 строк.'],
+['Google Sheets CRM','Manage customers and orders in a single spreadsheet.','Customer database\nOrder statuses\nPaid revenue summary','Google account and Apps Script authorization. Formulas cover the first 1000 rows.']),
+make('business-website','website',10000,
+['Үш тілдегі сайт-визитка','Қызметтер мен бағалар және WhatsApp арқылы байланыс.','Телефонға бейімделген\nҚазақша, орысша, ағылшынша\nWhatsApp батырмасы','HTML файлында бизнес деректерін өзгерту қажет. Домен мен хостинг бағаға кірмейді.'],
+['Сайт-визитка на трёх языках','Услуги, цены и связь через WhatsApp в одном готовом HTML-файле.','Адаптивный дизайн\nКазахский, русский и английский\nКнопка WhatsApp','Нужно изменить данные в HTML-файле. Домен и хостинг не включены.'],
+['Trilingual business website','Services, pricing and WhatsApp contact in a ready-to-edit HTML file.','Responsive design\nKazakh, Russian and English\nWhatsApp contact button','Edit your details in the HTML file. Domain and hosting are not included.']),
+make('expense-tracker','sheets',0,
+['Кіріс пен шығын есебі','Тегін бастаңыз: кіріс, шығын және таза пайда есебі.','Кіріс пен шығыс кестесі\nТаза пайда формуласы\nСыртқы сервистерсіз','Google аккаунт және Apps Script. Банктермен автоматты байланыс жоқ.'],
+['Учёт доходов и расходов','Бесплатный инструмент: доходы, расходы и чистая прибыль.','Таблица денежных операций\nФормула чистой прибыли\nБез внешних сервисов','Google-аккаунт и Apps Script. Автоматическая связь с банками не предусмотрена.'],
+['Income & expense tracker','Start free: track income, expenses and net profit.','Transaction spreadsheet\nNet profit formula\nNo external services','Google account and Apps Script. No automatic bank integration.'])
+];
+
+const packNames={sto:['СТО пакеті','Пакет для СТО','Auto service bundle'],salon:['Сұлулық салоны пакеті','Пакет для салона','Salon bundle'],shop:['Дүкен пакеті','Пакет для магазина','Shop bundle'],studio:['Студия пакеті','Пакет для студии','Studio bundle']};
+export const businessPacks=Object.entries(packNames).map(([sector,names])=>make('pack-'+sector,'bundle',sector==='shop'?17500:20000,
+[names[0],sector==='shop'?'Тапсырыс боты, клиенттер кестесі және сайт — бір ZIP ішінде.':'Жазылу боты, клиенттер кестесі және сайт — бір ZIP ішінде.','Бот және бизнеске сай бастапқы баптаулар\nGoogle Sheets CRM\nҮш тілдегі сайт-визитка\nӘр құралға жеке нұсқаулық','Python 3.10+, Telegram токені, Google аккаунт. Құралдар бөлек орнатылады, автоматты синхрондау жоқ. Ботқа тұрақты компьютер/сервер қажет; домен, хостинг пен орнату қызметі кірмейді.'],
+[names[1],sector==='shop'?'Бот заказов, таблица клиентов и сайт в одном ZIP.':'Бот записи, таблица клиентов и сайт в одном ZIP.','Бот с начальными настройками для бизнеса\nGoogle Sheets CRM\nСайт-визитка на трёх языках\nИнструкция к каждому инструменту','Python 3.10+, токен Telegram, Google-аккаунт. Инструменты устанавливаются отдельно, автоматической синхронизации нет. Для бота нужен работающий компьютер/сервер; домен, хостинг и услуга установки не включены.'],
+[names[2],sector==='shop'?'Order bot, customer spreadsheet and website in one ZIP.':'Booking bot, customer spreadsheet and website in one ZIP.','Bot with starter business settings\nGoogle Sheets CRM\nTrilingual business website\nSeparate setup guides','Python 3.10+, Telegram token, Google account. Tools are installed separately without automatic synchronization. The bot needs a running computer/server; domain, hosting and installation service are not included.']));
+export const catalog=[...baseCatalog,...businessPacks];

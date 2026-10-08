@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "BotStore: start locally",
+      "type": "process",
+      "command": "node",
+      "args": ["scripts/desktop-start.mjs"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": [],
+      "presentation": {"reveal": "always", "panel": "dedicated"}
+    },
+    {
+      "label": "BotStore: check TypeScript",
+      "type": "process",
+      "command": "node",
+      "args": ["node_modules/typescript/bin/tsc", "--noEmit"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": "$tsc"
+    }
+  ]
+}

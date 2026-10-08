@@ -1,0 +1,7 @@
+{
+  "folders": [{"path": "."}],
+  "settings": {
+    "files.exclude": {"**/.sites-runtime": true, "**/.wrangler": true},
+    "search.exclude": {"**/node_modules": true, "**/dist": true, "**/.sites-runtime": true, "**/.wrangler": true}
+  }
+}

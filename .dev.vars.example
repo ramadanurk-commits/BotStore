@@ -1,0 +1,9 @@
+# Local development only. Matches the existing localhost sign-in helper.
+# This is a simulated developer identity, not an email login service.
+ADMIN_EMAIL=seedy@sites.test
+PAYMENT_MODE=disabled
+SITE_ORIGIN=http://127.0.0.1:5173
+FREEDOMPAY_MERCHANT_ID=
+FREEDOMPAY_SECRET=
+KASPI_TRANSFER_CARD=
+KASPI_TRANSFER_PHONE=
