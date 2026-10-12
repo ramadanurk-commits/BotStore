@@ -15,7 +15,10 @@
     "local:setup": "node scripts/local-setup.mjs",
     "local:start": "node scripts/desktop-start.mjs",
     "typecheck": "tsc --noEmit",
-    "test:comparison": "node tests/comparison.test.mjs"
+    "test:comparison": "node tests/comparison.test.mjs",
+    "test:backend": "node tests/backend-persistence.mjs",
+    "test:api": "node tests/api.integration.mjs",
+    "test:live": "node scripts/production-smoke.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

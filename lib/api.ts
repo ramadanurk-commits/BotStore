@@ -22,7 +22,15 @@ const kaspiReady=(c:any)=>c.kaspiEnabled===true&&validKaspiLink(c.kaspiUrl||'')&
 async function config(){const row=await db().prepare('SELECT value FROM settings WHERE key = ?').bind('business').first<any>();return row?JSON.parse(row.value):{businessName:'BotStore',contactEmail:'',payment:{kk:'',ru:'',en:''},terms:{kk:'',ru:'',en:''},enabled:false}}
 async function log(u:any,action:string,target:string){await db().prepare('INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),u.email,action,target,Date.now()).run()}
 export async function handle(req:Request){try{return await route(req)}catch(e){if(e instanceof HttpError)return json({error:e.message},e.status);console.error('BotStore API',e);return json({error:'unavailable'},503)}}
-async function route(req:Request):Promise<Response>{const url=new URL(req.url),path=url.pathname.replace(/^\/api\/?/,'').split('/').filter(Boolean);if(path[0]==='payment'&&path[1]==='result')return paymentCallback(req);const u=await identity(req),method=req.method;
+async function route(req:Request):Promise<Response>{
+const url=new URL(req.url),path=url.pathname.replace(/^\/api\/?/,'').split('/').filter(Boolean);
+if(path[0]==='health'&&path.length===1){
+ if(req.method!=='GET')return json({error:'methodNotAllowed'},405);
+ const probe=await db().prepare('SELECT 1 AS ready').first<{ready:number}>();
+ if(probe?.ready!==1)return json({status:'unavailable',database:'unavailable'},503);
+ return json({status:'ok',database:'connected',serverTime:new Date().toISOString()});
+}
+if(path[0]==='payment'&&path[1]==='result')return paymentCallback(req);const u=await identity(req),method=req.method;
 const salesResponse=await salesRoute(req,path,u);if(salesResponse)return salesResponse;
 if(!['GET','HEAD'].includes(method)){const origin=req.headers.get('origin');if(!origin||origin!==url.origin)fail(403,'forbidden');if(!u)fail(401,'signin')}
 if(path[0]==='bootstrap'&&method==='GET'){
