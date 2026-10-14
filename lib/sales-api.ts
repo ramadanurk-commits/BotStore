@@ -31,9 +31,26 @@ export async function salesRoute(req:Request,path:string[],u:User):Promise<Respo
   }
   if(!u)return reply({error:'signin'},401);
   if(req.method==='GET'&&!path[1]){
-   const s=new URL(req.url).searchParams.get('status');if(s&&!statuses.includes(s))return reply({error:'invalid'},400);
-   const q=u.admin?(s?'SELECT * FROM service_requests WHERE status=? ORDER BY created_at DESC LIMIT 200':'SELECT * FROM service_requests ORDER BY created_at DESC LIMIT 200'):'SELECT id,product_id,tier,sector,status,quote,deadline,created_at FROM service_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 200';
-   const p=db().prepare(q);const rows=await (u.admin?(s?p.bind(s):p):p.bind(u.id)).all();return reply({requests:rows.results});
+   const params=new URL(req.url).searchParams;
+   const status=params.get('status'),search=(params.get('q')||'').trim();
+   if((status&&!statuses.includes(status))||search.length>100)return reply({error:'invalid'},400);
+   if(search&&!u.admin)return reply({error:'forbidden'},403);
+   if(!u.admin){
+    const rows=await db().prepare('SELECT id,product_id,tier,sector,status,quote,deadline,created_at FROM service_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 200').bind(u.id).all();
+    return reply({requests:rows.results});
+   }
+   const conditions:string[]=[],values:string[]=[];
+   if(status){conditions.push('status=?');values.push(status);}
+   if(search){
+    // Treat %, _ and backslash as literal characters, not LIKE wildcards.
+    const pattern='%'+search.replace(/[\\%_]/g,character=>'\\'+character)+'%';
+    conditions.push("(id LIKE ? ESCAPE '\\' OR name LIKE ? ESCAPE '\\' OR contact LIKE ? ESCAPE '\\' OR message LIKE ? ESCAPE '\\')");
+    values.push(pattern,pattern,pattern,pattern);
+   }
+   const query='SELECT * FROM service_requests'+(conditions.length?' WHERE '+conditions.join(' AND '):'')+' ORDER BY created_at DESC, id DESC LIMIT 200';
+   const statement=db().prepare(query);
+   const rows=await (values.length?statement.bind(...values):statement).all();
+   return reply({requests:rows.results});
   }
   if(writing&&path[1]){
    if(!u.admin)return reply({error:'forbidden'},403);const b=await payload(req);if(!b)return reply({error:'invalid'},400);
