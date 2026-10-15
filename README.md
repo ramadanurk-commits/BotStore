@@ -43,13 +43,14 @@
 | `GET /api/service-requests?q=...&status=...` | D1-де мәтін бойынша іздеп, статуспен сүзеді | Тек админ; `q` ең көбі 100 символ |
 | `POST /api/service-requests/:id` | Статус пен ұсынысты сақтайды | Админ, қатар өңдеу қорғанысы бар |
 
-Жеке кабинет пен админге кіруді Sites платформасының ChatGPT авторизациясы тексереді. Ашық каталог пен қызметке өтінім жіберу үшін кіру қажет емес. Ақылы сатып алуда файл төлем расталғаннан кейін ғана ашылады. Автоматты Kaspi төлемі немесе сатушыға автоматты төлем бар деп көрсетпеңіз: қолмен растау және провайдер конфигурациясы кодта бөлек қарастырылған.
+Email/құпиясөз және ChatGPT арқылы кіру бар. Бұрынғы аккаунтқа email арқылы кіруді кабинеттен қосуға болады; ID, сатып алулар мен рұқсаттар сақталады. Қалпына келтіру жеке кодпен орындалады, email хаттары жіберілмейді. Толығырақ: [email арқылы кіру](docs/email-login.md). Ашық каталог пен қызметке өтінім жіберу үшін кіру қажет емес. Ақылы сатып алуда файл төлем расталғаннан кейін ғана ашылады. Автоматты Kaspi төлемі немесе сатушыға автоматты төлем бар деп көрсетпеңіз: қолмен растау және провайдер конфигурациясы кодта бөлек қарастырылған.
 
 ## Тексеру командалары
 
 ```bash
 npm run typecheck
 npm run test:backend
+npm run test:auth
 npm run test:api
 npm run test:comparison
 npm run test:live
@@ -69,7 +70,7 @@ Three-language digital-template marketplace for Kazakhstan. UI: Kazakh, Russian 
 ## Features
 
 - Catalog search, category filters, sorting and persistent favorites.
-- Platform-owned ChatGPT sign-in. No separate password database.
+- ChatGPT sign-in plus email/password registration, secure server-side sessions, one-time recovery codes and linking from an existing platform account. See [email login](docs/email-login.md).
 - D1: users, products, orders, favorites, store settings, uploaded-file metadata and audit trail.
 - R2: private seller ZIP uploads (15 MB maximum).
 - Free purchases unlock immediately. Paid purchases use **manual bank-transfer verification**. No automatic Kaspi or card processing is connected.
@@ -86,7 +87,7 @@ Three-language digital-template marketplace for Kazakhstan. UI: Kazakh, Russian 
 4. Enable paid sales only once these details are correct. The site never invents bank details.
 5. Verify incoming transfers in your bank. Open Orders and confirm only verified full payments. Customer-supplied transfer references alone are not proof of payment.
 6. Add or edit real templates and select Published. Seller submissions remain in review until an administrator publishes them.
-7. The hosting audience is public. Purchasing and private account data still require ChatGPT sign-in. Standalone Google/email registration is not connected.
+7. The hosting audience is public. Purchasing and private account data require sign-in through email/password or ChatGPT. Existing users can link email from their account to retain purchases and rights. Standalone Google/Apple/Telegram providers are not connected.
 
 ## Starting catalog
 

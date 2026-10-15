@@ -1,0 +1,85 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {mkdir,readFile,readdir} from 'node:fs/promises';
+const require=createRequire(import.meta.url);
+const {build}=createRequire(require.resolve('vite'))('esbuild');
+const {Miniflare}=createRequire(require.resolve('wrangler'))('miniflare');
+await mkdir('.sites-runtime',{recursive:true});
+await build({stdin:{contents:"import {handle} from './lib/api'; export default {fetch:handle}",resolveDir:process.cwd(),sourcefile:'email-auth-entry.ts'},bundle:true,format:'esm',platform:'browser',target:'es2022',external:['cloudflare:workers','node:crypto'],outfile:'.sites-runtime/email-auth-test.js'});
+const worker=new Miniflare({modules:true,scriptPath:'.sites-runtime/email-auth-test.js',compatibilityDate:'2026-05-01',compatibilityFlags:['nodejs_compat'],bindings:{ADMIN_EMAIL:'owner@example.test'},d1Databases:['DB'],r2Buckets:['BUCKET']});
+let count=0;
+function check(value,message){assert.ok(value,message);count++;}
+const password='Correct horse battery BotStore 2026!';
+const payload={name:'Email Customer',email:'buyer-email@example.test',password,consent:true};
+async function call(endpoint,{body,cookie,platform=false,origin='https://auth.test',method}={}){
+ const headers={};if(cookie)headers.cookie=cookie;
+ if(platform){headers['oai-authenticated-user-id']='owner-id';headers['oai-authenticated-user-email']='owner@example.test';}
+ if(body!==undefined){headers.origin=origin;headers['content-type']='application/json';}
+ const response=await worker.dispatchFetch('https://auth.test/api/'+endpoint,{method:method||(body===undefined?'GET':'POST'),headers,body:body===undefined?undefined:JSON.stringify(body)});
+ return {status:response.status,data:await response.json(),setCookie:response.headers.get('set-cookie'),cookie:response.headers.get('set-cookie')?.split(';')[0]};
+}
+try{
+ const database=await worker.getD1Database('DB');
+ for(const file of (await readdir('drizzle')).filter(file=>file.endsWith('.sql')).sort())for(const statement of (await readFile('drizzle/'+file,'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean))await database.prepare(statement).run();
+ check((await call('auth/register',{body:payload,origin:'https://evil.test'})).status===403,'cross-origin signup denied');
+ check((await call('auth/register',{body:{...payload,password:'short'}})).status===400,'short passwords rejected');
+ check((await call('auth/register',{body:{...payload,consent:false}})).status===400,'registration requires consent');
+ check((await call('auth/register')).status===405,'signup requires POST');
+ check((await call('auth/link',{body:payload})).status===401,'anonymous account linking denied');
+ check((await call('auth/register',{body:{...payload,email:'owner@example.test'}})).status===409,'owner email cannot be self-registered');
+ const registered=await call('auth/register',{body:{...payload,admin:true,user_id:'owner-id'}});
+ check(registered.status===200&&registered.cookie,'signup creates a real session');
+ check(/HttpOnly/.test(registered.setCookie)&&/Secure/.test(registered.setCookie)&&/SameSite=Lax/.test(registered.setCookie)&&/Path=\//.test(registered.setCookie)&&!registered.setCookie.includes('Domain='),'host-only secure HttpOnly SameSite cookie');
+ check(/^[a-f0-9]{64}$/.test(registered.data.recoveryCode),'recovery code has 256 bits of randomness');
+ check(!JSON.stringify(registered.data).includes(password),'response never includes the password');
+ let boot=await call('bootstrap',{cookie:registered.cookie});
+ const id=boot.data.user.id;
+ check(id.startsWith('email:')&&boot.data.user.provider==='email'&&boot.data.user.admin===false,'client-supplied role and identity cannot grant admin');
+ check((await call('bootstrap',{cookie:registered.cookie+'; '+registered.cookie})).data.user===null,'ambiguous duplicate session cookies are rejected');
+ check((await call('auth/logout',{cookie:registered.cookie,body:{},origin:'https://evil.test'})).status===403,'cross-origin logout is denied');
+ const account=await database.prepare('SELECT * FROM email_accounts WHERE user_id=?').bind(id).first();
+ check(account.password_hash!==password&&account.password_hash.length===64&&account.salt.length===32,'password has a random salt and scrypt hash');
+ check(account.recovery_hash!==registered.data.recoveryCode&&account.recovery_hash.length===64,'only a hash of the recovery code is stored');
+ const session=await database.prepare('SELECT * FROM email_sessions WHERE user_id=?').bind(id).first();
+ check(!registered.cookie.includes(session.token_hash),'raw session token is not stored in the database');
+ check((await call('admin',{cookie:registered.cookie})).status===403,'email customer cannot open admin API');
+ check((await call('service-requests?q=secret',{cookie:registered.cookie})).status===403,'email customer cannot search private requests');
+ check((await call('auth/register',{body:payload})).status===409,'duplicate account rejected');
+ const logout=await call('auth/logout',{cookie:registered.cookie,body:{}});
+ check(logout.status===200&&logout.setCookie.includes('Max-Age=0'),'logout clears the browser cookie');
+ check((await call('bootstrap',{cookie:registered.cookie})).data.user===null,'logout revokes server-side session');
+ check((await call('auth/login',{body:{email:payload.email,password:'incorrect password'}})).status===401,'incorrect password rejected');
+ check((await call('auth/login',{body:{email:'missing@example.test',password}})).data.error==='invalidCredentials','unknown account has the same public login error');
+ const login=await call('auth/login',{body:{email:'  BUYER-EMAIL@EXAMPLE.TEST  ',password}});
+ check(login.status===200&&(await call('bootstrap',{cookie:login.cookie})).data.user.id===id,'normalized email login restores the same identity');
+ const second=await call('auth/login',{body:{email:payload.email,password}});
+ check(second.cookie!==login.cookie,'each login issues a new session token');
+ check((await call('auth/recover',{body:{email:payload.email,password:'New longer account password 2026!',recoveryCode:'0'.repeat(64)}})).status===401,'invalid recovery secret rejected');
+ const recovered=await call('auth/recover',{body:{email:payload.email,password:'New longer account password 2026!',recoveryCode:registered.data.recoveryCode}});
+ check(recovered.status===200&&recovered.data.recoveryCode!==registered.data.recoveryCode,'recovery rotates password and one-time recovery code');
+ check((await call('bootstrap',{cookie:login.cookie})).data.user===null&&(await call('bootstrap',{cookie:second.cookie})).data.user===null,'password recovery revokes all previous sessions');
+ check((await call('bootstrap',{cookie:recovered.cookie})).data.user.id===id,'recovery creates a session for the same account');
+ check((await call('auth/recover',{body:{email:payload.email,password:'Another longer account password 2026!',recoveryCode:registered.data.recoveryCode}})).status===401,'old recovery code cannot be reused');
+ check((await call('auth/login',{body:{email:payload.email,password}})).status===401,'old password no longer works');
+ check((await call('auth/login',{body:{email:payload.email,password:'New longer account password 2026!'}})).status===200,'new password works');
+ await database.prepare('UPDATE email_sessions SET expires_at=0 WHERE user_id=?').bind(id).run();
+ check((await call('bootstrap',{cookie:recovered.cookie})).data.user===null,'expired session rejected');
+ check((await call('bootstrap',{cookie:'__Host-botstore-session='+'a'.repeat(64)})).data.user===null,'fabricated session rejected');
+ await call('initialize',{platform:true,body:{}});
+ const ownerOrder=(await call('orders',{platform:true,body:{productId:'expense-tracker',accepted:true}})).data.order;
+ check(!!ownerOrder?.id,'existing owner account keeps its order');
+ const linked=await call('auth/link',{platform:true,body:{password,consent:true,email:'attacker@example.test',admin:false}});
+ check(linked.status===200,'verified platform owner can link email login');
+ const linkedUser=(await call('bootstrap',{cookie:linked.cookie})).data.user;
+ check(linkedUser.id==='owner-id'&&linkedUser.email==='owner@example.test'&&linkedUser.admin,'linked email preserves verified owner identity and role');
+ check((await call('admin',{cookie:linked.cookie})).status===200,'linked owner email can open admin API');
+ check((await call('orders',{cookie:linked.cookie})).data.orders.some(order=>order.id===ownerOrder.id),'linked email retains existing purchases');
+ check((await call('orders/'+ownerOrder.id+'/download',{cookie:registered.cookie})).status===401,'revoked customer session cannot download owner files');
+ const customerAgain=await call('auth/login',{body:{email:payload.email,password:'New longer account password 2026!'}});
+ check((await call('orders/'+ownerOrder.id+'/download',{cookie:customerAgain.cookie})).status===404,'active email customer cannot download another account purchase');
+ check((await call('auth/link',{platform:true,body:{password,consent:true},origin:'https://evil.test'})).status===403,'cross-origin owner credential linking is denied');
+ check((await call('auth/link',{platform:true,body:{password,consent:true}})).status===409,'linking cannot overwrite an existing credential');
+ let rateStatus=0;for(let i=0;i<13;i++)rateStatus=(await call('auth/login',{body:{email:'rate-test@example.test',password:'not the correct password'}})).status;
+ check(rateStatus===429,'repeated login attempts are rate limited');
+ console.log(`PASS: ${count} email authentication checks (scrypt, sessions, recovery, owner linking and access isolation).`);
+}finally{await worker.dispose();}

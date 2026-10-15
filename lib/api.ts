@@ -2,6 +2,7 @@ import {balances,validateInstall,zipFiles} from './commerce';
 import {paymentReady,startPayment,paymentCallback} from './payments';
 import {installFiles} from './install-files';
 import {salesRoute} from './sales-api';
+import {authRoute,resolveIdentity,emailLoginLinked} from './email-auth';
 import {ensureBusinessPacks} from './catalog-sync';
 import {db,bucket,adminEmail,kaspiTransfer} from './db';
 import {catalog} from './catalog';
@@ -10,7 +11,6 @@ class HttpError extends Error{constructor(public status:number,message:string){s
 const fail=(status:number,msg:string):never=>{throw new HttpError(status,msg)};
 const json=(x:unknown,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const decode=(p:any,priv=false)=>{const out={...p,content:JSON.parse(p.content)};if(!priv)delete out.file_key;return out};
-async function identity(req:Request){const id=req.headers.get('oai-authenticated-user-id'),email=req.headers.get('oai-authenticated-user-email');if(!id||!email)return null;let name=email;try{if(req.headers.get('oai-authenticated-user-full-name-encoding')==='percent-encoded-utf-8')name=decodeURIComponent(req.headers.get('oai-authenticated-user-full-name')||email)}catch{}return {id,email,name,admin:!!adminEmail()&&email.toLowerCase()===adminEmail()}}
 function requireUser(u:any){if(!u)fail(401,'signin');return u}
 function requireAdmin(u:any){requireUser(u);if(!u.admin)fail(403,'forbidden')}
 async function body(req:Request){if(Number(req.headers.get('content-length')||0)>100000)fail(413,'tooLarge');const text=await req.text();if(text.length>100000)fail(413,'tooLarge');try{return JSON.parse(text)}catch{fail(400,'invalid')}}
@@ -30,14 +30,16 @@ if(path[0]==='health'&&path.length===1){
  if(probe?.ready!==1)return json({status:'unavailable',database:'unavailable'},503);
  return json({status:'ok',database:'connected',serverTime:new Date().toISOString()});
 }
-if(path[0]==='payment'&&path[1]==='result')return paymentCallback(req);const u=await identity(req),method=req.method;
+if(path[0]==='payment'&&path[1]==='result')return paymentCallback(req);
+const authResponse=await authRoute(req,path);if(authResponse)return authResponse;
+const u=await resolveIdentity(req),method=req.method;
 const salesResponse=await salesRoute(req,path,u);if(salesResponse)return salesResponse;
 if(!['GET','HEAD'].includes(method)){const origin=req.headers.get('origin');if(!origin||origin!==url.origin)fail(403,'forbidden');if(!u)fail(401,'signin')}
 if(path[0]==='bootstrap'&&method==='GET'){
  await ensureBusinessPacks();const cfg=await config();let fav:any[]=[];
  if(u){await db().prepare('INSERT INTO users (id,email,name,created_at) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET email=excluded.email,name=excluded.name').bind(u.id,u.email,u.name,Date.now()).run();fav=(await db().prepare('SELECT product_id FROM favorites WHERE user_id=?').bind(u.id).all<any>()).results;}
  const result=await db().prepare("SELECT * FROM products WHERE status='published' ORDER BY created_at,id").all<any>();
- return json({user:u,products:result.results.map(p=>decode(p)),favorites:fav.map(x=>x.product_id),settings:{...cfg,commissionBps:cfg.commissionBps??1500,paymentReady:paymentReady(),kaspiTransfer:kaspiTransfer()}});
+ return json({user:u,emailLoginLinked:u?await emailLoginLinked(u.id):false,products:result.results.map(p=>decode(p)),favorites:fav.map(x=>x.product_id),settings:{...cfg,commissionBps:cfg.commissionBps??1500,paymentReady:paymentReady(),kaspiTransfer:kaspiTransfer()}});
 }
 if(path[0]==='initialize'&&method==='POST'){
  requireAdmin(u);const now=Date.now();await db().batch(catalog.map(p=>db().prepare('INSERT OR IGNORE INTO products (id,owner_id,category,price,content,status,file_key,filename,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(p.id,u!.id,p.category,p.price,JSON.stringify(p.content),'published',p.file_key,p.filename,now,now)));await log(u,'initialize','catalog');return json({ok:true});

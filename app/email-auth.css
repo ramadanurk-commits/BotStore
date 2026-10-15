@@ -1,0 +1,17 @@
+.email-auth{max-width:480px;padding:28px;border:1px solid #e2e4f0;border-radius:18px;background:#fff;margin:26px auto;display:grid;gap:18px;text-align:left;box-shadow:0 10px 35px #19234006}
+.auth-mark{height:44px;width:44px;display:grid;place-items:center;background:#efedff;color:#5c50e8;border-radius:12px}
+.email-auth h3{font-size:1.25rem;line-height:1.4}
+.auth-tabs{display:flex;padding:4px;border-radius:10px;background:#f3f4f9;gap:4px}
+.auth-tabs button{flex:1;padding:10px 12px;border-radius:7px;font-size:.9rem}
+.auth-tabs button[aria-pressed=true]{background:#fff;color:#5c50e8;box-shadow:0 2px 5px #19234012;font-weight:600}
+.auth-checkbox{display:flex!important;align-items:flex-start;gap:10px;line-height:1.55;font-size:.875rem}
+.auth-checkbox input[type=checkbox]{width:18px!important;height:18px;margin-top:3px;padding:0;flex-shrink:0;accent-color:#5c50e8}
+.auth-note{font-size:.85rem;color:#69718a;line-height:1.65}
+.auth-divider{display:flex;align-items:center;gap:12px;font-size:.8rem;color:#9097a9}
+.auth-divider:before,.auth-divider:after{content:'';height:1px;flex:1;background:#e7e9f2}
+.recovery-save>code{font-size:.92rem;padding:16px;background:#f4f3ff;border:1px solid #ddd9fa;border-radius:10px;overflow-wrap:anywhere;user-select:all}
+.email-link-setup{max-width:720px;border:1px solid #e2e4f0;border-radius:14px;padding:18px 22px;margin:20px 0}
+.email-link-setup summary{cursor:pointer;color:#5146c8;font-weight:600}
+.link-email-auth{margin:20px 0 0;box-shadow:none;max-width:100%}
+.identity .text-button{display:flex;align-items:center;gap:7px;color:#7569cd;font-size:.9rem}
+@media(max-width:560px){.email-auth{padding:22px 18px;margin:20px 0;max-width:100%}.email-link-setup{padding:16px}.link-email-auth{padding:18px 0 0;border:0;border-radius:0}.auth-tabs button{font-size:.85rem}}

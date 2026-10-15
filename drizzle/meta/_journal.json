@@ -29,6 +29,13 @@
       "when": 1790749517377,
       "tag": "0003_jittery_sabretooth",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792042436247,
+      "tag": "0004_email_auth",
+      "breakpoints": true
     }
   ]
 }
