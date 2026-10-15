@@ -6,7 +6,7 @@ const {build}=createRequire(require.resolve('vite'))('esbuild');
 const {Miniflare}=createRequire(require.resolve('wrangler'))('miniflare');
 await mkdir('.sites-runtime',{recursive:true});
 await build({stdin:{contents:"import {handle} from './lib/api'; export default {fetch:handle}",resolveDir:process.cwd(),sourcefile:'test-entry.ts'},bundle:true,format:'esm',platform:'browser',target:'es2022',external:['cloudflare:workers','node:crypto'],outfile:'.sites-runtime/api-test.js'});
-const mf=new Miniflare({modules:true,scriptPath:'.sites-runtime/api-test.js',compatibilityDate:'2026-05-01',compatibilityFlags:['nodejs_compat'],bindings:{ADMIN_EMAIL:'owner@example.test'},d1Databases:['DB'],r2Buckets:['BUCKET']});
+const mf=new Miniflare({modules:true,scriptPath:'.sites-runtime/api-test.js',compatibilityDate:'2026-05-01',compatibilityFlags:['nodejs_compat'],bindings:{ADMIN_EMAIL:'owner@example.test',KASPI_TRANSFER_CARD:'4400000000000000',KASPI_TRANSFER_PHONE:'87000000000'},d1Databases:['DB'],r2Buckets:['BUCKET']});
 let count=0;
 const check=(value,msg)=>{assert.ok(value,msg);count++};
 try{
@@ -80,13 +80,14 @@ try{
  const configured=await mf.dispatchFetch('http://local.test/api/install/'+sto.id+'/download',{headers:{'oai-authenticated-user-id':'buyer-id','oai-authenticated-user-email':'buyer@example.test'}});
  check(configured.status===200,'configured archive download');await writeFile('.sites-runtime/configured.zip',Buffer.from(await configured.arrayBuffer()));
 
- check((await call('admin/settings','buyer',{...settings,kaspiEnabled:true})).status===403,'Kaspi configuration owner only');
- check((await call('admin/settings','admin',{...settings,kaspiUrl:'https://pay.kaspi.kz.evil.test/pay/test'})).status===400,'Kaspi lookalike domain rejected');
- check((await call('admin/settings','admin',{...settings,kaspiUrl:'javascript:alert(1)'})).status===400,'unsafe Kaspi URL rejected');
- check((await call('admin/settings','admin',{...settings,kaspiEnabled:true})).status===400,'Kaspi cannot enable without merchant details');
- const kaspiSettings={...settings,payment:{kk:'',ru:'',en:''},kaspiEnabled:true,kaspiUrl:'https://pay.kaspi.kz/pay/TEST_ONLY',kaspiMerchant:'ISOLATED TEST MERCHANT'};
- check((await call('admin/settings','admin',kaspiSettings)).status===200,'Kaspi settings persist without redundant manual instructions');
- const kb=(await call('bootstrap',null)).data;check(kb.settings.kaspiMerchant==='ISOLATED TEST MERCHANT','buyer sees configured merchant');
+ check((await call('admin/settings','buyer',{...settings,kaspiEnabled:true})).status===403,'transfer configuration owner only');
+ const kaspiSettings={...settings,payment:{kk:'',ru:'',en:''},kaspiEnabled:true,kaspiUrl:'javascript:alert(1)',kaspiMerchant:'LEGACY MERCHANT'};
+ check((await call('admin/settings','admin',kaspiSettings)).status===200,'legacy provider fields ignored; transfers need no merchant');
+ const kb=(await call('bootstrap',null)).data;
+ check(kb.settings.paymentMode==='transfer'&&kb.settings.paymentReady===false,'transfer-only mode advertised');
+ check(kb.settings.kaspiEnabled===false&&kb.settings.kaspiUrl===''&&kb.settings.kaspiMerchant==='','legacy Pay cannot be re-enabled');
+ check(kb.settings.kaspiTransfer.card==='4400000000000000'&&kb.settings.kaspiTransfer.phone==='87000000000','configured transfer details available');
+ check((await call('checkout','buyer',{orderId:paid.id})).status===409,'new provider checkout blocked in transfer-only mode');
  const ko=(await call('orders','stranger',{productId:'sheets-crm',accepted:true})).data.order;
  check(ko.status==='pending','Kaspi checkout starts unpaid');
  check((await call('orders/'+ko.id+'/reference','stranger',{reference:'TEST RECEIPT KASPI'})).status===200,'Kaspi receipt reference goes to review');

@@ -43,7 +43,7 @@
 | `GET /api/service-requests?q=...&status=...` | D1-де мәтін бойынша іздеп, статуспен сүзеді | Тек админ; `q` ең көбі 100 символ |
 | `POST /api/service-requests/:id` | Статус пен ұсынысты сақтайды | Админ, қатар өңдеу қорғанысы бар |
 
-Email/құпиясөз және ChatGPT арқылы кіру бар. Бұрынғы аккаунтқа email арқылы кіруді кабинеттен қосуға болады; ID, сатып алулар мен рұқсаттар сақталады. Қалпына келтіру жеке кодпен орындалады, email хаттары жіберілмейді. Толығырақ: [email арқылы кіру](docs/email-login.md). Ашық каталог пен қызметке өтінім жіберу үшін кіру қажет емес. Ақылы сатып алуда файл төлем расталғаннан кейін ғана ашылады. Автоматты Kaspi төлемі немесе сатушыға автоматты төлем бар деп көрсетпеңіз: қолмен растау және провайдер конфигурациясы кодта бөлек қарастырылған.
+Email/құпиясөз және ChatGPT арқылы кіру бар. Бұрынғы аккаунтқа email арқылы кіруді кабинеттен қосуға болады; ID, сатып алулар мен рұқсаттар сақталады. Қалпына келтіру жеке кодпен орындалады, email хаттары жіберілмейді. Толығырақ: [email арқылы кіру](docs/email-login.md). Ашық каталог пен қызметке өтінім жіберу үшін кіру қажет емес. Ақылы сатып алуда файл төлем расталғаннан кейін ғана ашылады. Төлем тек Kaspi Gold картасына немесе телефонға аударыммен қабылданады. Kaspi Pay және жаңа онлайн төлемдер өшірілген. Сатып алушы түбіртек нөмірін жібереді; әкімші банктегі нақты түсімді тексеріп растайды. Карта мен телефон сервер баптауларында сақталады, репозиторийге жазылмайды.
 
 ## Тексеру командалары
 
@@ -112,7 +112,7 @@ The included templates are basic starter tools, not a hosted automation service.
 
 ## Operational limits
 
-- Manual transfer verification remains available. Freedom Pay code is prepared but disabled until merchant onboarding, credentials and sandbox/live acceptance testing. No automatic seller transfers, refunds, or outbound transactional email.
+- Kaspi Gold manual transfers are the only payment method. New provider checkout is blocked regardless of provider credentials. No automatic seller transfers, refunds, or outbound transactional email.
 - User interfaces show up to 500 recent records; audit view shows 50. Revenue aggregates use all orders.
 - ZIP files are private and moderation-gated; uploads are format/size checked, not antivirus scanned.
 - Before a broader commercial launch, finalize your actual business terms, customer access and operational support process.
@@ -129,7 +129,7 @@ The included templates are basic starter tools, not a hosted automation service.
 
 ### Freedom Pay integration — not activated
 
-Server-only `FREEDOMPAY_MERCHANT_ID`, `FREEDOMPAY_SECRET`, canonical HTTPS `SITE_ORIGIN`, and `PAYMENT_MODE=live` enable the adapter. Keep PAYMENT_MODE disabled until the provider has approved the merchant and the complete test/payment/refund process has been exercised with the provider. Do not paste secrets into chat or client code.
+New provider checkout is blocked by `/api/checkout`, regardless of environment settings. The historical adapter and signed callbacks are retained for existing payment records; they are not offered to customers. Do not paste secrets into chat or client code.
 
 Implementation follows https://freedompay.kz/docs-en/merchant-api/intro and https://freedompay.kz/docs-en/merchant-api/pay : signed init_payment.php requests, signed result callbacks at /api/payment/result, KZT/amount/payment-ID checks and idempotent fulfillment. Browser return URLs never mark an order paid. Test payment callbacks are refused. Ambiguous gateway timeouts stay locked; reconcile them in the provider account before any operational repair. There is no admin force-unlock button, automatic reconciliation, or refund implementation. Orders with payment attempts cannot be cancelled/recycled through the manual order endpoint.
 
@@ -137,10 +137,10 @@ Implementation follows https://freedompay.kz/docs-en/merchant-api/intro and http
 
 `python tests/booking.test.py` checks the booking flow with a mocked Telegram transport and temporary SQLite database. API integration tests cover reviews, support isolation, commissions, payouts and configured downloads. These are isolated software tests, not evidence of a live bank payment or Telegram deployment.
 
-## Kaspi Pay payment links
+## Kaspi Gold manual transfers only
 
-Admin Settings now includes the merchant name, an official HTTPS pay.kaspi.kz payment link and an enable switch. No link or bank details are supplied by default. Obtain your point-of-sale link in Kaspi Pay → Remote payments → Payment link, and check that its recipient is your business before enabling. Official guide: https://guide.kaspi.kz/partner/ru/pos/payments/remote/q2019 .
+Customers copy the configured card or phone, send the exact order amount through Transfers in the Kaspi app, then submit the receipt reference. Copy buttons also provide the amount and order ID. Sending a reference moves the order to review; it never unlocks files. The administrator checks the actual bank credit and confirms the order.
 
-The customer sees the exact order amount and can copy the amount/order ID, open Kaspi, enter the amount and order ID as a message, then return to submit a receipt reference. This is manual verification: neither clicking the link nor submitting a receipt marks an order paid. The administrator checks the actual credit in Kaspi Pay before approving the order. No Kaspi credentials, SMS codes, card numbers, or banking-session scraping are used. A live transfer was not tested.
+Kaspi Pay links, merchant fields and online checkout buttons have been removed. Legacy provider fields are ignored and returned as disabled. A live bank transfer has not been tested.
 
-Kaspi Gold manual transfers: owner-authorized card and phone details are configured as KASPI_TRANSFER_CARD and KASPI_TRANSFER_PHONE in the runtime environment, not committed to source. They are intentionally returned for customer display and copy buttons. Setting them is not automatic payment integration and does not bypass the paid-sales/terms setup gate.
+Owner-authorized details are configured as `KASPI_TRANSFER_CARD` and `KASPI_TRANSFER_PHONE` in the server environment, not committed to source. Both are required before enabling paid sales, together with support email and purchase terms in all three languages. Existing paid-sales settings are preserved.
