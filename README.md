@@ -1,5 +1,9 @@
 # BotStore KZ
 
+VS Code-та ашу, қорғауда көрсетілетін код және Vercel баптауы: **[docs/vercel-vscode.md](docs/vercel-vscode.md)**.
+Vercel нұсқасы дайындалған: интерфейс пен gateway Vercel-де, бұрынғы API/D1/R2 Cloudflare-де қалады. Нақты Vercel deployment URL-і сәтті жарияланғаннан кейін ғана көрсетіледі.
+
+
 Қазақстандағы шағын бизнеске арналған дайын Telegram-боттар, Google Sheets автоматтандырулары және сайт үлгілерінің маркетплейсі.
 
 **Жұмыс істейтін сайт:** https://botstore-kz-market.ra1k0n.chatgpt.site

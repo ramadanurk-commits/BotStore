@@ -1,0 +1,13 @@
+.git
+.openai
+.sites-runtime
+.wrangler
+.env*
+.dev.vars*
+dist
+history
+outputs
+work
+node_modules
+.next
+.next-vercel
