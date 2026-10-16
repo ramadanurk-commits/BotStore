@@ -1,3 +1,4 @@
+import {marketplace} from './marketplace-i18n';
 import {auth} from './auth-i18n';
 import {sales} from './sales-i18n';
 import {growth} from './growth-i18n';
@@ -14,4 +15,4 @@ const entries:Record<string,[string,string,string]>={
 };
 export const languages:Lang[]=['kk','ru','en'];
 export const langNames={kk:'Қазақша',ru:'Русский',en:'English'};
-export function translate(lang:Lang,key:string){return (auth[key]||sales[key]||entries[key]||growth[key]||comparison[key])?.[languages.indexOf(lang)]||key}
+export function translate(lang:Lang,key:string){return (marketplace[key]||auth[key]||sales[key]||entries[key]||growth[key]||comparison[key])?.[languages.indexOf(lang)]||key}
